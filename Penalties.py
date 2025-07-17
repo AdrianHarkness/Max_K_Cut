@@ -26,15 +26,15 @@ def naive_qubo_penalty(graph, k):
 
     total_weight = sum(data['weight'] for u, v, data in graph.edges(data=True))
     num_nodes = graph.number_of_nodes()
-    c = max(num_nodes/k, total_weight)*np.ones(num_nodes)
+    c = max(num_nodes/k, total_weight) * np.ones(num_nodes)
 
     return c
 
 def interpolated_qubo_penalty(graph, k, t):
     """
     Interpolated penalty function between tight and naive penalties.
-    t = 0 -> naive penalty
-    t = 1 -> tight penalty
+    t = 0 -> tight penalty
+    t = 1 -> naive penalty
     """
     if t < 0 or t > 1:
         raise ValueError("t must be between 0 and 1.")
@@ -42,13 +42,14 @@ def interpolated_qubo_penalty(graph, k, t):
     tight_pen = tight_qubo_penalty(graph, k)
     naive_pen = naive_qubo_penalty(graph, k)
 
-    return t * tight_pen + (1-t) * naive_pen
+    return (1-t) * tight_pen + t * naive_pen
 
 
 
 # Penalties for the R-BQO constraints
 #================================================================================================
 def tight_rqubo_penalty(graph, k):
+
     c = np.zeros(graph.number_of_nodes())
     for v in graph.nodes():
         neighbors_plus = []
@@ -72,15 +73,15 @@ def naive_rqubo_penalty(graph, k):
 
     total_weight = sum(data['weight'] for u, v, data in graph.edges(data=True))
     num_nodes = graph.number_of_nodes()
-    c = max(num_nodes/k, total_weight)*np.ones(num_nodes)
+    c = max(num_nodes/k, total_weight) * np.ones(num_nodes)
     
     return c
 
 def interpolated_rqubo_penalty(graph, k, t):
     '''
     Interpolated penalty function between tight and naive R-BQO penalties.
-    t = 0 -> naive penalty
-    t = 1 -> tight penalty
+    t = 0 -> tight penalty
+    t = 1 -> naive penalty
     '''
     if t < 0 or t > 1:
         raise ValueError("t must be between 0 and 1.")
@@ -88,4 +89,4 @@ def interpolated_rqubo_penalty(graph, k, t):
     tight_pen = tight_rqubo_penalty(graph, k)
     naive_pen = naive_rqubo_penalty(graph, k)
 
-    return t * tight_pen + (1-t) * naive_pen
+    return (1-t) * tight_pen + t * naive_pen

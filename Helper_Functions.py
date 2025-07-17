@@ -68,23 +68,23 @@ def plot_graph(G):
     weights = [d['weight'] for (_, _, d) in edges]
     is_weighted = not all(w == weights[0] for w in weights)
     
-    if is_weighted:
-        # Create a colormap and normalize weights for color mapping
-        cmap = plt.cm.plasma
-        norm = plt.Normalize(vmin=min(weights), vmax=max(weights))
-        
-        # Draw edges with colors based on weights
-        for (u, v, d) in edges:
-            weight = d['weight']
-            nx.draw_networkx_edges(G, pos, edgelist=[(u, v)], width=2, edge_color=[cmap(norm(weight))])
-        
-        # Add a colorbar
-        sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
-        sm.set_array([])
-        plt.colorbar(sm, ax=ax, label='Edge Weight')
-    else:
-        # For an unweighted graph, simply draw edges in a uniform color.
-        nx.draw_networkx_edges(G, pos)
+
+    # Create a colormap and normalize weights for color mapping
+    cmap = plt.cm.plasma
+    norm = plt.Normalize(vmin=min(weights), vmax=max(weights))
+    
+    # Draw edges with colors based on weights
+    for (u, v, d) in edges:
+        weight = d['weight']
+        nx.draw_networkx_edges(G, pos, edgelist=[(u, v)], width=2, edge_color=[cmap(norm(weight))])
+    
+    # Add a colorbar
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    plt.colorbar(sm, ax=ax, label='Edge Weight')
+    # else:
+    #     # For an unweighted graph, simply draw edges in a uniform color.
+    #     nx.draw_networkx_edges(G, pos)
 
     # Optionally draw labels (commented out for a simplified view)
     # nx.draw_networkx_labels(G, pos, font_size=12, font_color='black', ax=ax)
