@@ -120,7 +120,7 @@ Load and visualize results using `notebooks/analysis/visualize_results.ipynb`:
 ## Citation
 
 If you use this code, please cite:
-```
+```bibtex
 @misc{harkness2025characterizingquboreformulationsmaxkcut,
       title={Characterizing QUBO Reformulations of the Max-k-Cut Problem for Quantum Computing}, 
       author={Adrian Harkness and Hamidreza Validi and Ramin Fakhimi and Illya V. Hicks and Tamás Terlaky and Luis F. Zuluaga},
