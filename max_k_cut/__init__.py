@@ -32,6 +32,10 @@ from .helpers import (
     compute_bqo_objective,
     feasibility_filter,
     repenalize,
+    prepare_dicke_state_qiskit,
+    create_dicke_initial_state,
+    create_full_xy_mixer,
+    create_ring_xy_mixer,
 )
 
 from .qaoa import run_qaoa_extract_samples
@@ -61,6 +65,10 @@ __all__ = [
     "compute_bqo_objective",
     "feasibility_filter",
     "repenalize",
+    "prepare_dicke_state_qiskit",
+    "create_dicke_initial_state",
+    "create_full_xy_mixer",
+    "create_ring_xy_mixer",
     # QAOA
     "run_qaoa_extract_samples",
 ]

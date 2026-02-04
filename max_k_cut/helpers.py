@@ -3,6 +3,9 @@ import networkx as nx
 import matplotlib.pyplot as plt
 from qiskit_optimization.algorithms import OptimizationResultStatus, SolutionSample
 import copy
+from itertools import combinations
+from qiskit import QuantumCircuit
+import math
 
 def generate_graph(num_nodes, edge_probability, weighted=True, weight_range=1, seed=None):
     """
@@ -100,6 +103,7 @@ def expected_value(samples):
     for sample in samples:
         expval += sample.fval * sample.probability
     return expval
+
 
 def sample_std(samples, mean_val):
     """
@@ -313,3 +317,125 @@ def repenalize(samples, new_model):
         new_sample.fval = new_model.objective.evaluate(sample.x)
         new_samples.append(new_sample)
     return new_samples
+
+
+def prepare_dicke_state_qiskit(n, s):
+    """
+    Prepare a Dicke state with hamming weight s on n qubits.
+    Creates a uniform superposition over all states with exactly s qubits in |1⟩.
+    """
+    qc = QuantumCircuit(n)
+    
+    dicke_basis = list(combinations(range(n), s))
+    norm = 1 / math.sqrt(len(dicke_basis))
+    
+    state = [0] * (2**n)
+    for basis in dicke_basis:
+        index = sum([1 << (n - 1 - i) for i in basis])
+        state[index] = norm
+    
+    # Initialize the state (non-unitary operation, but works for initial state)
+    qc.initialize(state, list(range(n)))
+    return qc
+
+
+def create_dicke_initial_state(num_nodes, K):
+    """
+    Create an initial state circuit for Max-K-Cut where each node is in a 
+    Dicke state with hamming weight 1 over its K partition qubits.
+    
+    This creates a superposition over all feasible states where each node
+    is assigned to exactly one partition.
+    
+    Args:
+        num_nodes (int): Number of nodes in the graph
+        K (int): Number of partitions
+    
+    Returns:
+        QuantumCircuit: Circuit that initializes the Dicke state
+    """
+    total_qubits = num_nodes * K
+    init_qc = QuantumCircuit(total_qubits)
+    
+    # For each node, create a Dicke state with hamming weight 1
+    # on its K qubits
+    for i in range(num_nodes):
+        # Qubits for node i are at indices [i*K, i*K+1, ..., i*K+K-1]
+        qubit_indices = list(range(i * K, (i + 1) * K))
+        
+        # Create Dicke state with hamming weight 1 on these K qubits
+        dicke_circuit = prepare_dicke_state_qiskit(K, 1)
+        
+        # Append the Dicke state circuit to the appropriate qubits
+        init_qc.compose(dicke_circuit, qubits=qubit_indices, inplace=True)
+    
+    return init_qc
+
+
+def create_full_xy_mixer(num_nodes, K, beta):
+    """
+    Create a full XY mixer circuit for Max-K-Cut that applies XY gates between 
+    all pairs of qubits within each node's partition set.
+    
+    The XY mixer preserves hamming weight, making it ideal for enforcing the 
+    constraint that each node must be assigned to exactly one partition.
+    
+    Args:
+        num_nodes (int): Number of nodes in the graph
+        K (int): Number of partitions
+        beta (Parameter): QAOA mixer parameter
+    
+    Returns:
+        QuantumCircuit: Full XY mixer circuit
+    """
+    prob_size = num_nodes * K
+    full_xy_mixer = QuantumCircuit(prob_size, name="Full XY Mixer (Max-K-Cut)")
+    
+    for node_idx in range(num_nodes):
+        # Qubits for this node are at indices [node_idx*K, node_idx*K+1, ..., node_idx*K+K-1]
+        node_qubits = list(range(node_idx * K, (node_idx + 1) * K))
+        
+        # Apply XY mixer between all pairs of qubits within this node
+        for i, qubit_i in enumerate(node_qubits):
+            for qubit_j in node_qubits[:i]:  # Only pairs where j < i to avoid duplicates
+                full_xy_mixer.rxx(2 * beta, qubit_i, qubit_j)
+                full_xy_mixer.ryy(2 * beta, qubit_i, qubit_j)
+        full_xy_mixer.barrier()  # Optional: separate different nodes
+    
+    return full_xy_mixer
+
+
+def create_ring_xy_mixer(num_nodes, K, beta):
+    """
+    Create a ring XY mixer circuit for Max-K-Cut that applies XY gates between 
+    adjacent qubits (forming a ring) within each node's partition set.
+    
+    The XY mixer preserves hamming weight, making it ideal for enforcing the 
+    constraint that each node must be assigned to exactly one partition.
+    The ring topology is more gate-efficient than the full mixer.
+    
+    Args:
+        num_nodes (int): Number of nodes in the graph
+        K (int): Number of partitions
+        beta (Parameter): QAOA mixer parameter
+    
+    Returns:
+        QuantumCircuit: Ring XY mixer circuit
+    """
+    prob_size = num_nodes * K
+    ring_xy_mixer = QuantumCircuit(prob_size, name="Ring XY Mixer (Max-K-Cut)")
+    
+    for node_idx in range(num_nodes):
+        # Qubits for this node are at indices [node_idx*K, node_idx*K+1, ..., node_idx*K+K-1]
+        node_qubits = list(range(node_idx * K, (node_idx + 1) * K))
+        
+        # Apply XY mixer between adjacent qubits (forming a ring) within this node
+        for i in range(K):
+            qubit_i = node_qubits[i]
+            # Next qubit in the ring (wraps around)
+            qubit_j = node_qubits[(i + 1) % K]
+            ring_xy_mixer.rxx(2 * beta, qubit_i, qubit_j)
+            ring_xy_mixer.ryy(2 * beta, qubit_i, qubit_j)
+        ring_xy_mixer.barrier()  # Optional: separate different nodes
+    
+    return ring_xy_mixer

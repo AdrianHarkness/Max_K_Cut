@@ -1,6 +1,6 @@
 # Core
 numpy>=1.26
-networkx>=3.3
+networkx>=3.2
 matplotlib>=3.9
 docplex>=2.28
 cplex>=22.1.2
