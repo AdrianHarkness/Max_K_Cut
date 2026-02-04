@@ -62,7 +62,7 @@ def tight_rqubo_penalty(graph, k):
                 neighbors_minus.append(u)
         dv_plus = sum([graph.edges[v, u]['weight'] for u in neighbors_plus])
         dv_minus = sum([graph.edges[v, u]['weight'] for u in neighbors_minus])
-        c[v] = (dv_plus - dv_minus) # is it - 2 dv_minus or - dv_minus???
+        c[v] = (dv_plus - dv_minus) # is it - 2 dv_minus or - dv_minus?
     return c
 
 def naive_rqubo_penalty(graph, k):

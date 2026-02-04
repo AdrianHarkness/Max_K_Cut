@@ -216,8 +216,6 @@ def compute_bqo_objective(assignments, G, K):
         objective_value += weight * (1 - sum_product)
     return objective_value
 
-import copy
-
 
 def feasibility_filter(G, K, samples, label, set_fval_to_zero=False):
     """

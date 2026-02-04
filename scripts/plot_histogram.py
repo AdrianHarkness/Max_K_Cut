@@ -1,5 +1,5 @@
 from qiskit_optimization.translators import from_docplex_mp # creates QuadraticProgram from docplex model
-from Helper_Functions import repenalize, feasibility_filter
+from max_k_cut.helpers import repenalize, feasibility_filter
 import numpy as np
 import matplotlib.pyplot as plt
 
