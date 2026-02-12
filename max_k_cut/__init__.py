@@ -10,6 +10,7 @@ from .models import (
     docplex_QUBO,
     docplex_RBQO,
     docplex_RQUBO,
+    docplex_QUBO_no_constraints,
 )
 
 from .penalties import (

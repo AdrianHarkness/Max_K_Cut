@@ -72,6 +72,7 @@ def docplex_QUBO(graph, k, penalty, name):
 def docplex_QUBO_no_constraints(graph, k, name):
     """
     Create a Quadratic Unconstrained Binary Optimization (QUBO) model for the Max-K-Cut problem with no constraints.
+    The constraints are meant to be enforced with a mixer instead of penalties.
     """
     # Create the model
     model = Model(name=name)
