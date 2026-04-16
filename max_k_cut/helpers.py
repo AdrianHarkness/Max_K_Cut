@@ -305,6 +305,57 @@ def feasibility_filter(G, K, samples, label, set_fval_to_zero=False):
         return feasible_samples, probability_feasible
 
 
+def _expected_qp_variable_names(label: str, num_nodes: int, K: int):
+    """Variable order for ``docplex_QUBO`` / ``docplex_RQUBO`` (row-major over nodes)."""
+    if label.startswith("QUBO"):
+        return [f"x{i}{j}" for i in range(num_nodes) for j in range(K)]
+    if label.startswith("RQUBO"):
+        return [f"x{i}{j}" for i in range(num_nodes) for j in range(K - 1)]
+    raise ValueError("label must start with 'QUBO' or 'RQUBO'")
+
+
+def feasibility_mask_from_qp(qp, label: str, num_nodes: int, K: int) -> np.ndarray:
+    """
+    Binary mask over computational basis indices for use with QAOA statevectors.
+
+    Index ``z`` uses Qiskit's little-endian convention (qubit ``q`` has bit ``(z >> q) & 1``).
+    Variable order must match ``docplex_QUBO`` / ``docplex_RQUBO`` / ``from_docplex_mp``.
+
+    Feasibility matches :func:`feasibility_filter`: QUBO one-hot rows; RQUBO row sums in ``{0,1}``.
+
+    Returns:
+        ``mask`` of shape ``(2**n,)`` with values in ``{0.0, 1.0}``.
+    """
+    expected = _expected_qp_variable_names(label, num_nodes, K)
+    n = qp.get_num_binary_vars()
+    if n != len(expected):
+        raise ValueError(
+            f"QP has {n} binary vars but expected {len(expected)} for label={label!r}, "
+            f"num_nodes={num_nodes}, K={K}"
+        )
+    actual = [qp.variables[i].name for i in range(n)]
+    if actual != expected:
+        raise ValueError(
+            "QP variable names/order do not match docplex models. "
+            f"Got {actual[:8]}{'...' if len(actual) > 8 else ''} "
+            f"expected {expected[:8]}{'...' if len(expected) > 8 else ''}"
+        )
+
+    dim = 2**n
+    mask = np.zeros(dim, dtype=np.float64)
+    for z in range(dim):
+        bits = np.array([(z >> q) & 1 for q in range(n)], dtype=np.int8)
+        if label.startswith("QUBO"):
+            x = bits.reshape(num_nodes, K)
+            ok = bool(np.all(x.sum(axis=1) == 1))
+        else:
+            x = bits.reshape(num_nodes, K - 1)
+            s = x.sum(axis=1)
+            ok = bool(np.all((s == 0) | (s == 1)))
+        mask[z] = 1.0 if ok else 0.0
+    return mask
+
+
 def repenalize(samples, new_model):
     new_samples = []
     for sample in samples:
