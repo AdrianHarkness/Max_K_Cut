@@ -12,8 +12,19 @@ This package implements and compares four different optimization formulations fo
 
 ## Installation
 
+With [uv](https://docs.astral.sh/uv/) (recommended — creates `.venv/`, installs the package in
+editable mode, and pins the resolution in `uv.lock`):
+
 ```bash
-pip install -r requirements.txt
+uv sync
+```
+
+Run anything inside the environment with `uv run`, e.g. `uv run pytest` or `uv run jupyter lab`.
+
+With pip:
+
+```bash
+pip install -e .
 ```
 
 ## Quick Start
@@ -74,9 +85,8 @@ Max_K_Cut/
 ├── tests/                   # Unit tests (optional)
 │   └── test_models.py
 ├── README.md
-├── MIGRATION_GUIDE.md       # Guide for updating old code
-├── REPACKAGING_PLAN.md      # Original repackaging plan
-└── requirements.txt
+├── pyproject.toml           # Package metadata and dependencies
+└── uv.lock                  # Pinned resolution (uv sync)
 ```
 
 ## Key Components
