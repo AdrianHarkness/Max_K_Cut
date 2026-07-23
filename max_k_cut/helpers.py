@@ -305,6 +305,75 @@ def feasibility_filter(G, K, samples, label, set_fval_to_zero=False):
         return feasible_samples, probability_feasible
 
 
+def hamming_distance_to_feasibility(G, K, samples, label):
+    """
+    Per-sample minimum bit-flip (Hamming) distance to the nearest feasible
+    bitstring, plus its probability-weighted distribution.
+
+    Feasibility matches :func:`feasibility_filter`: for "QUBO*" labels each
+    node's K bits must be one-hot; for "RQUBO*" labels each node's K-1 bits
+    must sum to 0 or 1. Rows are independent, so the minimum distance is the
+    sum over nodes of the per-node distance: |row_sum - 1| for one-hot,
+    max(row_sum - 1, 0) for the reduced encoding.
+
+    Must be called on the raw sample list (before feasibility_filter, which
+    renormalizes probabilities over the feasible subset).
+
+    Args:
+        G: Graph object.
+        K: Number of partitions.
+        samples: List of samples from the optimization result.
+        label: String starting with "QUBO" or "RQUBO".
+
+    Returns:
+        Dict with:
+        - "distances": (num_samples,) int array, distance of each sample.
+        - "probabilities": (num_samples,) float array of sample probabilities.
+        - "pmf": (num_nodes*(K-1)+1,) array; pmf[d] = total probability of
+          samples at distance d. pmf[0] equals the feasibility probability
+          returned by feasibility_filter. The support is the one-hot maximum
+          n*(K-1) for all labels so arrays are comparable across encodings
+          (RQUBO distances are structurally capped at n*(K-2)).
+        - "expected_distance": sum(d * p) over all samples.
+        - "expected_distance_infeasible": E[d | d > 0]; np.nan if all
+          samples are feasible.
+        - "feasibility_probability": pmf[0].
+    """
+    num_nodes = G.number_of_nodes()
+
+    if label.startswith("QUBO"):
+        def per_sample_distance(x):
+            row_sums = np.array(x).reshape((num_nodes, K)).sum(axis=1)
+            return int(np.abs(row_sums - 1).sum())
+    elif label.startswith("RQUBO"):
+        def per_sample_distance(x):
+            row_sums = np.array(x).reshape((num_nodes, K - 1)).sum(axis=1)
+            return int(np.maximum(row_sums - 1, 0).sum())
+    else:
+        raise ValueError("Invalid label. Needs to start with 'QUBO' or 'RQUBO'.")
+
+    distances = np.array([per_sample_distance(sample.x) for sample in samples], dtype=int)
+    probabilities = np.array([sample.probability for sample in samples], dtype=float)
+
+    max_dist = num_nodes * (K - 1)
+    pmf = np.bincount(distances, weights=probabilities, minlength=max_dist + 1)[: max_dist + 1]
+
+    expected_distance = float(np.dot(distances, probabilities))
+    infeasible_prob = float(pmf[1:].sum())
+    expected_distance_infeasible = (
+        expected_distance / infeasible_prob if infeasible_prob > 0 else np.nan
+    )
+
+    return {
+        "distances": distances,
+        "probabilities": probabilities,
+        "pmf": pmf,
+        "expected_distance": expected_distance,
+        "expected_distance_infeasible": expected_distance_infeasible,
+        "feasibility_probability": float(pmf[0]),
+    }
+
+
 def _expected_qp_variable_names(label: str, num_nodes: int, K: int):
     """Variable order for ``docplex_QUBO`` / ``docplex_RQUBO`` (row-major over nodes)."""
     if label.startswith("QUBO"):
