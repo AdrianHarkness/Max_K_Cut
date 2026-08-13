@@ -43,6 +43,18 @@ from .helpers import (
 
 from .qaoa import run_qaoa_extract_samples
 
+from .resources import (
+    RESOURCE_MODELS,
+    build_cost_operator,
+    build_cost_layer,
+    build_model_circuits,
+    decompose_for_counting,
+    logical_metrics,
+    hardware_metrics,
+    interaction_counts,
+    rebuild_experiment_graphs,
+)
+
 __version__ = "0.1.0"
 __all__ = [
     # Models
@@ -76,4 +88,14 @@ __all__ = [
     "create_ring_xy_mixer",
     # QAOA
     "run_qaoa_extract_samples",
+    # Resources
+    "RESOURCE_MODELS",
+    "build_cost_operator",
+    "build_cost_layer",
+    "build_model_circuits",
+    "decompose_for_counting",
+    "logical_metrics",
+    "hardware_metrics",
+    "interaction_counts",
+    "rebuild_experiment_graphs",
 ]
