@@ -52,6 +52,7 @@ def test_qubit_counts():
     n = G.number_of_nodes()
     assert build_model_circuits("QUBO", G, K)["num_qubits"] == n * K
     assert build_model_circuits("RQUBO", G, K)["num_qubits"] == n * (K - 1)
+    assert build_model_circuits("Dicke RQUBO", G, K)["num_qubits"] == n * (K - 1)
     assert build_model_circuits("XY Mixer", G, K)["num_qubits"] == n * K
 
 
@@ -73,6 +74,13 @@ def test_logical_cost_counts_closed_form():
         == (K - 1) ** 2 * E + comb(K - 1, 2) * active_rqubo
     )
 
+    # Dicke RQUBO runs the same cost layer as RQUBO; only the init differs.
+    dicke_rqubo = build_model_circuits("Dicke RQUBO", G, K, t=0.0)
+    assert (
+        logical_metrics(dicke_rqubo["cost"])["twoq_count"]
+        == logical_metrics(rqubo["cost"])["twoq_count"]
+    )
+
     xy = build_model_circuits("XY Mixer", G, K)
     assert logical_metrics(xy["cost"])["twoq_count"] == K * E
 
@@ -84,6 +92,10 @@ def test_mixer_and_init_counts():
     assert logical_metrics(xy["mixer"])["twoq_count"] == 2 * K * n
     # Dicke prep decomposes to a fixed number of CX per node (4 for K=3).
     assert logical_metrics(xy["init"])["twoq_count"] == 4 * n
+    # Reduced-Dicke prep is a gate-based cascade: (K-2) cry + (K-2) cx per node.
+    dicke_rqubo = build_model_circuits("Dicke RQUBO", G, K)
+    assert logical_metrics(dicke_rqubo["init"])["twoq_count"] == 2 * (K - 2) * n
+    assert logical_metrics(dicke_rqubo["mixer"])["twoq_count"] == 0
     # QUBO/RQUBO have no 2-qubit gates outside the cost layer.
     for name in ("QUBO", "RQUBO"):
         c = build_model_circuits(name, G, K)

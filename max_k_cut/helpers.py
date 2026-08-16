@@ -492,6 +492,76 @@ def create_dicke_initial_state(num_nodes, K):
     return init_qc
 
 
+def prepare_reduced_dicke_state_qiskit(K):
+    """
+    Prepare the uniform superposition over the K feasible states of one node's
+    RQUBO register: the 0-hot state (implied color K) and the K-1 one-hot states.
+
+        |psi> = (1/sqrt(K)) * ( |0...0> + sum_j |e_j> )
+
+    This is the K-qubit hamming-weight-1 Dicke (W) state with the implied last
+    qubit projected out, i.e. a superposition of the weight-0 and weight-1 Dicke
+    states on K-1 qubits with amplitudes 1/sqrt(K) and sqrt((K-1)/K).
+
+    Built from gates (no initialize): an Ry sets the 0-hot amplitude, then a
+    W-state excitation-passing cascade (CRy + CX pairs) distributes the rest
+    uniformly over the one-hot states. O(K) gates, O(K) depth.
+
+    Args:
+        K (int): Number of partitions. The circuit acts on K-1 qubits.
+
+    Returns:
+        QuantumCircuit: Circuit on K-1 qubits preparing the state.
+    """
+    if K < 2:
+        raise ValueError("K must be at least 2.")
+    n = K - 1
+    qc = QuantumCircuit(n)
+
+    # |0...0> keeps amplitude 1/sqrt(K); the excited branch carries sqrt((K-1)/K).
+    qc.ry(2 * np.arccos(1 / math.sqrt(K)), 0)
+
+    # Pass the excitation down the register, leaving amplitude 1/sqrt(K) at each site.
+    # Before step m the excited-at-m branch has amplitude sqrt((n-m)/K); keeping
+    # 1/sqrt(K) at site m means a split angle of arccos(1/sqrt(n-m)).
+    for m in range(n - 1):
+        qc.cry(2 * np.arccos(1 / math.sqrt(n - m)), m, m + 1)
+        qc.cx(m + 1, m)
+
+    return qc
+
+
+def create_reduced_dicke_initial_state(num_nodes, K):
+    """
+    Create an initial state circuit for the RQUBO Max-K-Cut encoding where each
+    node's K-1 qubits are in a uniform superposition over its K feasible states
+    (the 0-hot state plus the K-1 one-hot states).
+
+    This is the RQUBO analog of create_dicke_initial_state: the initial state
+    has zero amplitude on every infeasible (multi-hot) bitstring and is uniform
+    over all K^num_nodes feasible colorings.
+
+    Args:
+        num_nodes (int): Number of nodes in the graph
+        K (int): Number of partitions
+
+    Returns:
+        QuantumCircuit: Circuit on num_nodes*(K-1) qubits that initializes the state
+    """
+    n = K - 1
+    total_qubits = num_nodes * n
+    init_qc = QuantumCircuit(total_qubits)
+
+    node_circuit = prepare_reduced_dicke_state_qiskit(K)
+    for i in range(num_nodes):
+        # Qubits for node i are at indices [i*(K-1), ..., (i+1)*(K-1) - 1],
+        # matching the x{i}{j} variable order of docplex_RQUBO / from_docplex_mp.
+        qubit_indices = list(range(i * n, (i + 1) * n))
+        init_qc.compose(node_circuit, qubits=qubit_indices, inplace=True)
+
+    return init_qc
+
+
 def create_full_xy_mixer(num_nodes, K, beta):
     """
     Create a full XY mixer circuit for Max-K-Cut that applies XY gates between 

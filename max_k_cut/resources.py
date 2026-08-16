@@ -22,15 +22,20 @@ from qiskit_optimization.translators import from_docplex_mp
 
 from .models import docplex_QUBO, docplex_RQUBO, docplex_QUBO_no_constraints
 from .penalties import interpolated_qubo_penalty, interpolated_rqubo_penalty
-from .helpers import create_dicke_initial_state, create_ring_xy_mixer
+from .helpers import (
+    create_dicke_initial_state,
+    create_reduced_dicke_initial_state,
+    create_ring_xy_mixer,
+)
 
-# The six model variants compared in the experiments. "XY Mixer (no agg)" runs
+# The seven model variants compared in the experiments. "XY Mixer (no agg)" runs
 # the identical circuit to "XY Mixer" (only the CVaR aggregation differs), so
 # resource metrics are shared between the two.
 RESOURCE_MODELS = [
     "QUBO",
     "RQUBO",
     "Dicke QUBO",
+    "Dicke RQUBO",
     "Penalty+Mixer QUBO",
     "XY Mixer",
     "XY Mixer (no agg)",
@@ -80,7 +85,7 @@ def build_cost_layer(op, gamma):
 
 def build_model_circuits(name, G, K, t=0.0):
     """
-    Reconstruct the reps=1 QAOA ansatz for one of the six model variants.
+    Reconstruct the reps=1 QAOA ansatz for one of the seven model variants.
 
     Args:
         name (str): one of RESOURCE_MODELS.
@@ -102,7 +107,7 @@ def build_model_circuits(name, G, K, t=0.0):
     n = G.number_of_nodes()
     if name in ("QUBO", "Dicke QUBO", "Penalty+Mixer QUBO"):
         dp_model = docplex_QUBO(G, K, interpolated_qubo_penalty(G, K, t), name)
-    elif name == "RQUBO":
+    elif name in ("RQUBO", "Dicke RQUBO"):
         dp_model = docplex_RQUBO(G, K, interpolated_rqubo_penalty(G, K, t), name)
     elif name in ("XY Mixer", "XY Mixer (no agg)"):
         dp_model = docplex_QUBO_no_constraints(G, K, name)
@@ -118,6 +123,10 @@ def build_model_circuits(name, G, K, t=0.0):
 
     if name in ("Dicke QUBO", "Penalty+Mixer QUBO", "XY Mixer", "XY Mixer (no agg)"):
         init = create_dicke_initial_state(n, K)
+    elif name == "Dicke RQUBO":
+        # Gate-based (ry/cry/cx) prep of the 0-hot/1-hot uniform superposition;
+        # cry counts as one 2-qubit gate at the logical level, like rzz/rxx/ryy.
+        init = create_reduced_dicke_initial_state(n, K)
     else:
         init = QuantumCircuit(num_qubits)
         init.h(range(num_qubits))

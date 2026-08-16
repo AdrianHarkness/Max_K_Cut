@@ -37,6 +37,8 @@ from .helpers import (
     repenalize,
     prepare_dicke_state_qiskit,
     create_dicke_initial_state,
+    prepare_reduced_dicke_state_qiskit,
+    create_reduced_dicke_initial_state,
     create_full_xy_mixer,
     create_ring_xy_mixer,
 )
@@ -84,6 +86,8 @@ __all__ = [
     "repenalize",
     "prepare_dicke_state_qiskit",
     "create_dicke_initial_state",
+    "prepare_reduced_dicke_state_qiskit",
+    "create_reduced_dicke_initial_state",
     "create_full_xy_mixer",
     "create_ring_xy_mixer",
     # QAOA
